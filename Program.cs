@@ -1,9 +1,10 @@
 ﻿using ClosedXML.Excel;
 using System.Text;
+using System.Reflection;
 
 Console.OutputEncoding = Encoding.UTF8; // set encoding to utf-8 to support cyrillic symbols
 
-string workdir = Path.Combine(Environment.CurrentDirectory, "XLSM");
+string workDir = Path.Combine(Environment.CurrentDirectory, "XLSM");
 string templateFile = "Template.xlsm";
 string resultFile = "Result.xlsm";
 int firstRow = 6;
@@ -16,18 +17,18 @@ if (args.Contains("-h") || args.Contains("--help"))
     return;
 }
 
-Console.WriteLine("[ Merge XLSM ]");
+Console.WriteLine($"[ MergeXLSM ]");
 
-ParseArgs(args, ref templateFile, ref resultFile, ref workdir, ref firstRow, ref lastRow, ref rowTag);
+ParseArgs(args, ref templateFile, ref resultFile, ref workDir, ref firstRow, ref lastRow, ref rowTag);
 
-string templatePath = Path.Combine(workdir, templateFile);
-string resultPath = Path.Combine(workdir, resultFile);
+string templatePath = Path.Combine(workDir, templateFile);
+string resultPath = Path.Combine(workDir, resultFile);
 
 Console.WriteLine();
 Console.WriteLine("Arguments:");
 Console.WriteLine($"Template file: {templatePath}");
 Console.WriteLine($"Result file: {resultPath}");
-Console.WriteLine($"Working directory: {workdir}");
+Console.WriteLine($"Working directory: {workDir}");
 Console.WriteLine($"First row: {firstRow}");
 Console.WriteLine($"Last row: {lastRow}");
 Console.WriteLine($"rowTag: {rowTag}");
@@ -61,12 +62,12 @@ var curRow = firstRow; // a current row to copy data
 
 Console.WriteLine("Getting files in a working dir...");
 
-foreach (var file in Directory.GetFiles(workdir, "*.xlsm")) // get xlsm files in a working dir
+foreach (var file in Directory.GetFiles(workDir, "*.xls?")) // get xlsx/xlsm files in a working dir
 {
     if (Path.GetFileName(file).Equals(templateFile, StringComparison.OrdinalIgnoreCase)) // skip template file
         continue;
 
-    Console.WriteLine($"XLSM file found: {file}");
+    Console.WriteLine($"File found: {file}");
 
     try
     {

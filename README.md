@@ -1,6 +1,6 @@
 # MergeXLSM
 
-#### A tool to merge XLSM files with the same headers written in C#
+#### A tool to merge XLSX/XLSM files with the same headers written in C#
 
 ### How does it work?
 You put the template file (containing only headers) and other XLSM files in the same directory and specify the range of lines that need to be merged. The program processes each file by copying lines from "first row" to "last row" (inclusive) into a template file, then saves the result to a separate file.
@@ -9,7 +9,7 @@ You put the template file (containing only headers) and other XLSM files in the 
 - Windows, Linux or macOS (x64 versions only)
 - [.NET Runtime 8.0](https://dotnet.microsoft.com/en-us/download/dotnet/8.0)
 - [ClosedXML](https://github.com/ClosedXML/ClosedXML) (<ins>already included</ins> in the project as a dependency)
-- Any office suite that supports XLSM format
+- Any office suite that supports XLSX/XLSM format
 
 ### Usage
 MergeXLSM.exe -i *template.xlsm* -o *result.xlsm* -dir *directory* -first *number* -last *number* -tag *text*
