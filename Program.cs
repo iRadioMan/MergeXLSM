@@ -1,10 +1,9 @@
 ﻿using ClosedXML.Excel;
-using DocumentFormat.OpenXml.Drawing;
 using System.Text;
 
 Console.OutputEncoding = Encoding.UTF8; // set encoding to utf-8 to support cyrillic symbols
 
-string workdir = Environment.CurrentDirectory + @"\XLSM\";
+string workdir = Path.Combine(Environment.CurrentDirectory, "XLSM");
 string templateFile = "Template.xlsm";
 string resultFile = "Result.xlsm";
 int firstRow = 6;
@@ -17,25 +16,38 @@ if (args.Contains("-h") || args.Contains("--help"))
     return;
 }
 
-Console.WriteLine("[ Merge XLSM ]\n");
+Console.WriteLine("[ Merge XLSM ]");
 
 ParseArgs(args, ref templateFile, ref resultFile, ref workdir, ref firstRow, ref lastRow, ref rowTag);
 
+string templatePath = Path.Combine(workdir, templateFile);
+string resultPath = Path.Combine(workdir, resultFile);
+
+Console.WriteLine();
 Console.WriteLine("Arguments:");
-Console.WriteLine($"Template file: {templateFile}");
-Console.WriteLine($"Result file: {resultFile}");
+Console.WriteLine($"Template file: {templatePath}");
+Console.WriteLine($"Result file: {resultPath}");
 Console.WriteLine($"Working directory: {workdir}");
 Console.WriteLine($"First row: {firstRow}");
 Console.WriteLine($"Last row: {lastRow}");
 Console.WriteLine($"rowTag: {rowTag}");
 Console.WriteLine();
+Console.WriteLine("Cleaning old results...");
 
-Console.WriteLine("Cleaning results...");
+if (File.Exists(resultPath)) // delete result file if exists
+{
+    try
+    {
+        File.Delete(resultPath);
+    }
+    catch (Exception e)
+    {
+        Console.WriteLine($"[Error] Cannot delete old result file: {e.Message}");
+        return;
+    }
+}
 
-if (File.Exists(workdir + resultFile)) // delete result file if exists
-    File.Delete(workdir + resultFile);
-
-if (!File.Exists(workdir + templateFile)) // check if template file exists
+if (!File.Exists(templatePath)) // check if template file exists
 {
     Console.WriteLine($"Template file {templateFile} is not found");
     return;
@@ -43,50 +55,55 @@ if (!File.Exists(workdir + templateFile)) // check if template file exists
 
 Console.WriteLine($"Creating a new worksheet from {templateFile}");
 
-var resultBook = new XLWorkbook(workdir + templateFile); // create new workbook from template that will contain merged results
+var resultBook = new XLWorkbook(templatePath); // create new workbook from template that will contain merged results
 var ws = resultBook.Worksheet(1); // open first worksheet
 var curRow = firstRow; // a current row to copy data
 
 Console.WriteLine("Getting files in a working dir...");
 
-foreach (var file in Directory.GetFiles(workdir)) // get all files in a working dir
+foreach (var file in Directory.GetFiles(workdir, "*.xlsm")) // get xlsm files in a working dir
 {
-    if (file.EndsWith(templateFile) || !file.EndsWith(".xlsm")) // skip template and non-xlsm files
+    if (Path.GetFileName(file).Equals(templateFile, StringComparison.OrdinalIgnoreCase)) // skip template file
         continue;
 
     Console.WriteLine($"XLSM file found: {file}");
 
     try
     {
-        using (var srcbook = new XLWorkbook(file)) // open source workbook
+        using var srcbook = new XLWorkbook(file); // open source workbook
+        var srcsheet = srcbook.Worksheet(1); // open first worksheet in a source workbook
+        int cpCnt = 0; // initialize a row counter for source workbook
+
+        for (int i = firstRow; i <= lastRow; ++i)
         {
-            var srcsheet = srcbook.Worksheet(1); // open first worksheet in a source workbook
-            int cpCnt = 0; // initialize a row counter for source workbook
-
-            for (int i = firstRow; i <= lastRow; ++i)
+            if (srcsheet.Cell(i, 1).Value.ToString() == rowTag) // if first cell in a row contains rowTag
             {
-                if (srcsheet.Cell(i, 1).Value.ToString() == rowTag) // if first cell in a row contains rowTag
-                {
-                    //srcsheet.Row(i).CopyTo(ws.Row(curRow)); // copy that row to worksheet
-                    CopyRowWithoutFormulas(srcsheet.Row(i), ws.Row(curRow));
-                    curRow++; // switch to next row
-                    cpCnt++; // count copied rows (for only last source workbook to notify user)
-                }
+                CopyRowWithoutFormulas(srcsheet.Row(i), ws.Row(curRow)); // copy that row
+                curRow++; // switch to next row
+                cpCnt++; // count copied rows (for only last source workbook to notify user)
             }
-
-            Console.WriteLine($"Rows copied: {cpCnt.ToString()}");
         }
+
+        Console.WriteLine($"Rows copied: {cpCnt}");
     }
-    catch (Exception exc)
+    catch (Exception e)
     {
-        Console.WriteLine($"[Error] Unable to process file: {exc.Message}");
+        Console.WriteLine($"[Error] Unable to process file: {e.Message}");
     }
 }
 
 Console.WriteLine();
 Console.WriteLine($"Total merged rows: {curRow - firstRow}.\nSaving results...");
-resultBook.SaveAs(workdir + resultFile);
-Console.WriteLine($"Saved to {resultFile}");
+
+try 
+{ 
+    resultBook.SaveAs(resultPath);
+    Console.WriteLine($"Saved to {resultPath}");
+}
+catch (Exception e)
+{
+    Console.WriteLine($"[Error] Failed to save result file: {e.Message}");
+}
 
 static void CopyRowWithoutFormulas(IXLRow sourceRow, IXLRow targetRow)
 {
@@ -106,20 +123,29 @@ static void ParseArgs(string[] args, ref string templateFile, ref string resultF
 
     for (int i = 0; i < args.Length - 1; i += 2)
     {
-        if (args[i].StartsWith("-") && !argsDict.ContainsKey(args[i]))
+        if (args[i].StartsWith('-') && !argsDict.ContainsKey(args[i]))
             argsDict[args[i]] = args[i + 1];
     }
 
     if (argsDict.TryGetValue("-i", out string? tempFile))
         templateFile = tempFile;
+
     if (argsDict.TryGetValue("-o", out string? resFile))
         resultFile = resFile;
+
     if (argsDict.TryGetValue("-dir", out string? dir))
-        workdir = dir + @"\";
+        workdir = Path.GetFullPath(dir);
+
     if (argsDict.TryGetValue("-first", out string? first) && int.TryParse(first, out int fRow))
         firstRow = fRow;
+    else if (argsDict.ContainsKey("-first"))
+        Console.WriteLine("[Warning] Invalid -first value, using default.");
+
     if (argsDict.TryGetValue("-last", out string? last) && int.TryParse(last, out int lRow))
         lastRow = lRow;
+    else if (argsDict.ContainsKey("-last"))
+        Console.WriteLine("[Warning] Invalid -last value, using default.");
+
     if (argsDict.TryGetValue("-rowTag", out string? t))
         rowTag = t;
 }
