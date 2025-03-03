@@ -1,6 +1,6 @@
 # MergeXLSM
 
-**Usage:** MergeXLSM.exe -i <template.xlsm> -o <result.xlsm> -dir <directory> -first <number> -last <number> -tag <text>
+**Usage:** MergeXLSM.exe -i *template.xlsm* -o *result.xlsm* -dir *directory* -first *number* -last *number* -tag *text*
 
 **Arguments:**
 
